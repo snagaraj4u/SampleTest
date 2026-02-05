@@ -1,0 +1,55 @@
+{
+  "sampleTodos": [
+    {
+      "title": "Complete project setup",
+      "completed": false,
+      "priority": "high"
+    },
+    {
+      "title": "Write unit tests",
+      "completed": false,
+      "priority": "high"
+    },
+    {
+      "title": "Review pull request",
+      "completed": true,
+      "priority": "medium"
+    },
+    {
+      "title": "Update documentation",
+      "completed": false,
+      "priority": "low"
+    },
+    {
+      "title": "Schedule team meeting",
+      "completed": true,
+      "priority": "medium"
+    }
+  ],
+  "bulkTodos": [
+    "Task 1",
+    "Task 2",
+    "Task 3",
+    "Task 4",
+    "Task 5",
+    "Task 6",
+    "Task 7",
+    "Task 8",
+    "Task 9",
+    "Task 10"
+  ],
+  "specialCharacterTodos": [
+    "Todo with special chars: !@#$%",
+    "Todo with unicode: 你好世界",
+    "Todo with emoji: 🎉",
+    "Todo with quotes: \"quoted text\"",
+    "Todo with ampersand: A & B"
+  ],
+  "longTodo": "This is a very long todo item that contains a lot of text to test how the application handles lengthy content. It should be able to display and manage this todo without any issues or truncation problems.",
+  "emptyTodos": [
+    "",
+    "   ",
+    "\t\t",
+    "\n"
+  ]
+}

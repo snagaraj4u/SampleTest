@@ -1,0 +1,48 @@
+{
+  "validUsers": [
+    {
+      "email": "admin@example.com",
+      "password": "Admin@123",
+      "role": "admin",
+      "firstName": "John",
+      "lastName": "Admin"
+    },
+    {
+      "email": "user@example.com",
+      "password": "User@123",
+      "role": "user",
+      "firstName": "Jane",
+      "lastName": "User"
+    },
+    {
+      "email": "manager@example.com",
+      "password": "Manager@123",
+      "role": "manager",
+      "firstName": "Bob",
+      "lastName": "Manager"
+    }
+  ],
+  "invalidUsers": [
+    {
+      "email": "invalid@example.com",
+      "password": "wrongpassword",
+      "expectedError": "Invalid credentials"
+    },
+    {
+      "email": "notanemail",
+      "password": "password",
+      "expectedError": "Invalid email format"
+    },
+    {
+      "email": "",
+      "password": "",
+      "expectedError": "Email and password are required"
+    }
+  ],
+  "newUser": {
+    "email": "newuser@example.com",
+    "password": "NewUser@123",
+    "firstName": "New",
+    "lastName": "User"
+  }
+}
