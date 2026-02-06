@@ -121,8 +121,9 @@ Open localhost:8080
 ### 6.5 Run Tests Page
 
 - **Select execution scope:**
-  - Full suite (testng.xml)
-  - Specific test class (dropdown of available classes)
+  - Full suite: runs `mvn clean test` (uses `testng.xml` — suite "AutomationSuite", test group "RegressionTests")
+  - Specific test class: runs `mvn test -Dtest=tests.<ClassName>` (must use package-qualified name, e.g. `tests.SampleTest`)
+- **Class discovery:** Parse `testng.xml` `<classes>` entries to populate the dropdown of available test classes
 - **"Run" button** to trigger execution
 - **Live console output** — Maven stdout/stderr streamed via WebSocket into a terminal-style panel in the browser
 - Run status indicator (idle / running / completed / failed)
@@ -148,10 +149,12 @@ Port:      8080
 [Express API endpoint]
         ↓
 [Spawn child process: mvn clean test]
+  cwd: selenium-testng/        ← CRITICAL: Maven must run from this directory
         ↓ (stdout/stderr)
 [WebSocket → stream to browser in real-time]
-        ↓ (on process exit)
-[Parse test-output/ExtentReport_*.html]
+        ↓ (ONLY after process exits — report is incomplete during run)
+[Parse selenium-testng/test-output/ExtentReport_*.html]
+  Format: ExtentReports 5.x SparkReporter HTML
         ↓
 [Store parsed results in memory]
         ↓
@@ -159,6 +162,8 @@ Port:      8080
         ↓
 [React dashboard renders results]
 ```
+
+**Important timing note:** `BaseTest.tearDown()` calls `extent.flush()` after each test method, which progressively writes to the HTML report. However, parsing must only occur **after the Maven process fully exits** to ensure complete data.
 
 ### Key API Endpoints
 
@@ -174,9 +179,18 @@ Port:      8080
 ### Report Parsing
 
 Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each run:
+- **Format:** ExtentReports 5.x SparkReporter HTML (`ExtentSparkReporter`)
+- **Filename pattern:** `ExtentReport_yyyyMMdd_HHmmss.html` (timestamp set by `ExtentReportManager`)
 - Extract: test names, statuses, durations, error messages, screenshot paths
 - Store in memory as structured objects
 - Serve via REST API
+- **Parse only after Maven process exits** — the report is written progressively via `extent.flush()` in `BaseTest.tearDown()` after each test method
+
+### Screenshot Serving
+
+- `ScreenshotUtil` saves screenshots using absolute paths via `System.getProperty("user.dir")`
+- Actual location: `selenium-testng/test-output/screenshots/<testname>.png`
+- The `/api/screenshots/:filename` endpoint must resolve files from the absolute path `selenium-testng/test-output/screenshots/`, not just a filename lookup
 
 ### In-Memory Data Model
 
@@ -187,6 +201,8 @@ Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each
   timestamp: "2026-02-06T10:30:00Z",
   duration: 12500,           // ms
   status: "failed",          // passed | failed | mixed
+  suiteName: "AutomationSuite",   // from testng.xml <suite name="">
+  testGroupName: "RegressionTests", // from testng.xml <test name="">
   passed: 8,
   failed: 2,
   skipped: 1,
@@ -197,6 +213,7 @@ Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each
       status: "passed",
       duration: 3200,
       error: null,
+      stackTrace: null,
       screenshot: null
     },
     {
@@ -206,7 +223,7 @@ Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each
       duration: 5100,
       error: "Expected title to contain 'Results' but was 'Google'",
       stackTrace: "org.testng.Assert...",
-      screenshot: "verifySearchResults.png"
+      screenshot: "verifySearchResults.png"  // filename only; resolve via selenium-testng/test-output/screenshots/
     }
   ]
 }
@@ -230,9 +247,13 @@ Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each
 - **Suite size:** Small (under 20 tests)
 - **Run frequency:** On-demand from the dashboard
 - **Framework location:** `selenium-testng/` directory relative to project root
-- **Entry point:** `mvn clean test` (or `mvn test -Dtest=<class>` for single class)
-- **Report output:** `selenium-testng/test-output/ExtentReport_*.html`
-- **Screenshots:** `selenium-testng/test-output/screenshots/`
+- **Entry point:** `mvn clean test` from `selenium-testng/` directory (or `mvn test -Dtest=tests.<ClassName>` for single class)
+- **Report output:** `selenium-testng/test-output/ExtentReport_yyyyMMdd_HHmmss.html`
+- **Screenshots:** `selenium-testng/test-output/screenshots/<testname>.png` (absolute paths stored by `ScreenshotUtil` via `System.getProperty("user.dir")`)
+- **Report format:** ExtentReports 5.1.1 SparkReporter HTML
+- **Suite config:** `testng.xml` defines suite "AutomationSuite" with test group "RegressionTests"
+- **Test pattern:** All test classes extend `base.BaseTest` and live in `tests` package; BaseTest provides `driver` (WebDriver) and `test` (ExtentTest) fields
+- **Known flakiness risk:** No explicit waits configured in the framework — tests may produce inconsistent results on slow networks. TestPulse should not retry or mask these; display results as-is
 
 ## 10. Out of Scope (v1)
 
@@ -242,9 +263,11 @@ Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each
 - Bug tracker integrations (Jira, GitHub Issues)
 - Email / Slack notifications
 - CI/CD integration
-- Multi-browser support configuration
+- Multi-browser support configuration (ChromeDriver is hardcoded in BaseTest)
 - Side-by-side screenshot comparison
 - Mobile-optimized layout
+- Automatic test retry or flaky test suppression
+- External config file for test URLs or test data
 
 ## 11. Future Enhancements (v2+)
 
