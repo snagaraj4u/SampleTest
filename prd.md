@@ -1,126 +1,262 @@
-# PRD: Test Automation Dashboard & Management Tool
+# PRD: TestPulse — Test Automation Dashboard
 
 ## 1. Problem Statement
 
 The current Selenium + TestNG automation framework produces raw HTML reports (ExtentReports) and screenshot artifacts, but lacks:
-- A centralized place to view historical test runs and trends
+- A centralized place to view test runs and trends at a glance
 - Real-time visibility into test execution progress
 - An easy way to trigger test runs without CLI access
-- Visual comparison of failure screenshots across runs
-- Team collaboration on test results (comments, assignments, status tracking)
+- Visual failure analysis with screenshot viewing
 
-Test results are local files that must be opened manually. There is no persistent history, no trend analysis, and no way for non-technical stakeholders to interact with test outcomes.
+Test results are local files that must be opened manually. There is no trend analysis and no way to trigger or monitor runs without the terminal.
 
-## 2. Proposed Solution
+## 2. Product Overview
 
-A **web application** that serves as a dashboard and management layer on top of the existing Selenium + TestNG framework. It will:
-- Parse and store ExtentReport data and screenshots
-- Display test run history with pass/fail trends
-- Allow users to trigger test runs from the browser
-- Provide failure analysis tools (screenshot viewer, log viewer, comparison)
-- Support team collaboration (comments, bug linking, status updates)
+**TestPulse** is a local web application that serves as a dashboard and control panel on top of the existing Selenium + TestNG framework.
 
-## 3. Target Users
+| Attribute | Decision |
+|-----------|----------|
+| **Name** | TestPulse |
+| **Type** | Local web application |
+| **URL** | `localhost:8080` |
+| **Stack** | JavaScript — React frontend, Node.js/Express backend |
+| **Storage** | In-memory (resets on server restart) |
+| **Polish** | Quick prototype — functional, basic styling |
+| **Theme** | Light mode only |
+| **Auth** | None (local use) |
+| **Notifications** | None |
 
-| Persona | Needs |
-|---------|-------|
-| **QA Engineer** | Trigger runs, view results, analyze failures, track flaky tests |
-| **Developer** | See which tests broke after a commit, view failure details and screenshots |
-| **QA Lead / Manager** | Trend dashboards, release readiness metrics, team workload |
-| **Product Owner** | High-level pass/fail summary, release confidence |
+## 3. Target User
 
-## 4. Core Features (MVP)
+Single QA engineer / developer running the tool locally to gain confidence in test results before scaling to a team.
 
-### 4.1 Test Run Dashboard
-- List of all test runs with timestamp, duration, pass/fail/skip counts
-- Status badges (passed, failed, mixed)
-- Filter and search by date range, status, test name
+## 4. User Flow
 
-### 4.2 Test Run Detail View
-- Expandable tree of test suites → test classes → test methods
-- Per-test status, duration, and error messages
-- Failure screenshots displayed inline
-- Full stack trace viewer for failures
+```
+Open localhost:8080
+        ↓
+  Welcome Screen
+  (summary cards: total runs, pass rate, last run status)
+  (prominent "Run Tests" button)
+        ↓
+  ┌─────────────────────────────────────┐
+  │  Option A: Click "Run Tests"        │
+  │  → Select: full suite or class      │
+  │  → Live Maven console logs stream   │
+  │  →   in browser via WebSocket       │
+  │  → Run completes → results appear   │
+  └─────────────────────────────────────┘
+  ┌─────────────────────────────────────┐
+  │  Option B: View past results        │
+  │  → Click a run from the run list    │
+  │  → See per-test pass/fail/skip      │
+  │  → Click failed test → error +      │
+  │     screenshot in lightbox/modal    │
+  └─────────────────────────────────────┘
+  ┌─────────────────────────────────────┐
+  │  Option C: View trends              │
+  │  → Pass rate over time chart        │
+  │  → Most failing tests chart         │
+  └─────────────────────────────────────┘
+```
 
-### 4.3 Trend & Analytics
-- Pass rate over time (line chart)
-- Most frequently failing tests (bar chart)
-- Flaky test detection (tests that alternate pass/fail)
-- Average test duration trends
+## 5. Navigation
 
-### 4.4 Test Execution Trigger
-- "Run Tests" button that triggers `mvn clean test` on the server
-- Real-time log streaming during execution
-- Ability to select specific test classes or the full suite
-- Execution queue (prevent concurrent runs or allow parallel)
+**Top navbar** (GitHub-style horizontal navigation):
 
-### 4.5 Screenshot Management
-- Side-by-side screenshot comparison across runs
-- Zoom and annotate failure screenshots
-- Download original screenshots
+```
+┌──────────────────────────────────────────────────────────┐
+│  🔬 TestPulse    Dashboard    Runs    Trends    Run Tests │
+└──────────────────────────────────────────────────────────┘
+```
 
-### 4.6 Collaboration
-- Comment threads on individual test failures
-- Link failures to bug tracker issues (Jira, GitHub Issues)
-- Assign failures to team members for investigation
-- Status tracking per failure (new, investigating, known bug, fixed)
+| Tab | Content |
+|-----|---------|
+| **Dashboard** | Welcome / home — summary cards, latest run status, quick stats |
+| **Runs** | List of all test runs with status, timestamp, pass/fail/skip counts |
+| **Trends** | Charts — pass rate over time, most frequently failing tests |
+| **Run Tests** | Trigger test execution with live Maven console log streaming |
 
-## 5. Technical Architecture (Initial Proposal)
+## 6. Pages & Features (MVP)
 
-### Option A: Full-Stack JavaScript
-- **Frontend**: React (or Next.js) with Tailwind CSS
-- **Backend**: Node.js + Express REST API
-- **Database**: SQLite (MVP) → PostgreSQL (production)
-- **Real-time**: WebSocket for live test execution logs
+### 6.1 Dashboard (Landing Page)
 
-### Option B: Java-Native Stack
-- **Frontend**: Thymeleaf or Vaadin (stays in Java ecosystem)
-- **Backend**: Spring Boot REST API
-- **Database**: H2 (MVP) → PostgreSQL (production)
+- Welcome message
+- Summary cards:
+  - Total test runs (this session)
+  - Overall pass rate percentage
+  - Last run status (pass/fail/mixed) with timestamp
+- Prominent **"Run Tests"** button (front and center)
+- Quick link to latest test run details
 
-### Option C: Python Stack
-- **Frontend**: React or Vue.js
-- **Backend**: FastAPI or Django
-- **Database**: SQLite → PostgreSQL
+**Layout:** Spacious, card-based, modern, light background.
+
+### 6.2 Runs List
+
+- Table of all test runs (in-memory for current session)
+- Columns: Run #, Timestamp, Duration, Passed, Failed, Skipped, Status badge
+- Click a row → navigate to Run Detail view
+- Filter by status (all / passed / failed)
+
+### 6.3 Run Detail View
+
+- Header: run timestamp, duration, overall status
+- List of test methods with:
+  - Test class name
+  - Test method name
+  - Status (pass/fail/skip) with color badge
+  - Duration
+  - Error message (for failures)
+- **Failed tests:** Click to open **lightbox/modal** with:
+  - Full stack trace
+  - Zoomable failure screenshot
+  - Close button
+
+### 6.4 Trends Page
+
+- **Pass rate over time** — line chart across runs
+- **Most frequently failing tests** — bar chart
+- Only meaningful after 2+ runs
+
+### 6.5 Run Tests Page
+
+- **Select execution scope:**
+  - Full suite (testng.xml)
+  - Specific test class (dropdown of available classes)
+- **"Run" button** to trigger execution
+- **Live console output** — Maven stdout/stderr streamed via WebSocket into a terminal-style panel in the browser
+- Run status indicator (idle / running / completed / failed)
+- When complete: auto-parse results and navigate to the Run Detail view
+
+## 7. Technical Architecture
+
+### Stack
+
+```
+Frontend:  React + plain CSS (light theme)
+Backend:   Node.js + Express
+Real-time: WebSocket (ws library) for live Maven log streaming
+Storage:   In-memory JavaScript arrays/objects
+Port:      8080
+```
 
 ### Data Flow
+
 ```
-[Selenium Tests] → [ExtentReport HTML + Screenshots]
-                         ↓
-              [Report Parser Service]
-                         ↓
-                   [Database Store]
-                         ↓
-                  [REST API Layer]
-                         ↓
-                 [Web Dashboard UI]
+[User clicks "Run Tests"]
+        ↓
+[Express API endpoint]
+        ↓
+[Spawn child process: mvn clean test]
+        ↓ (stdout/stderr)
+[WebSocket → stream to browser in real-time]
+        ↓ (on process exit)
+[Parse test-output/ExtentReport_*.html]
+        ↓
+[Store parsed results in memory]
+        ↓
+[REST API serves results to frontend]
+        ↓
+[React dashboard renders results]
 ```
 
-## 6. Integration Points
+### Key API Endpoints
 
-- **Existing Framework**: Parse `test-output/ExtentReport_*.html` and `test-output/screenshots/`
-- **CI/CD**: Webhook or API to ingest results from CI pipelines
-- **Bug Trackers**: Jira / GitHub Issues API integration
-- **Notifications**: Email or Slack alerts on test failures
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/runs` | List all test runs |
+| GET | `/api/runs/:id` | Get single run detail with test results |
+| GET | `/api/trends` | Get trend data (pass rates, failure counts) |
+| POST | `/api/run` | Trigger a new test execution |
+| WS | `/ws/logs` | WebSocket for live Maven log streaming |
+| GET | `/api/screenshots/:filename` | Serve failure screenshot files |
 
-## 7. Non-Functional Requirements
+### Report Parsing
 
-- Response time: Dashboard loads in < 2 seconds
-- Support 1 year of test run history (storage scaling)
-- Mobile-responsive dashboard
-- Authentication and role-based access (viewer vs. admin)
+Parse the ExtentReport HTML files from `selenium-testng/test-output/` after each run:
+- Extract: test names, statuses, durations, error messages, screenshot paths
+- Store in memory as structured objects
+- Serve via REST API
 
-## 8. Open Questions (To Be Resolved in Interview)
+### In-Memory Data Model
 
-- [ ] Which tech stack does the team prefer?
-- [ ] Should this be a standalone app or embedded in existing CI/CD?
-- [ ] How many tests / how frequently do runs happen?
-- [ ] Is multi-browser test support on the roadmap?
-- [ ] What bug tracker is used (Jira, GitHub, etc.)?
-- [ ] Who will host this — cloud, on-prem, local dev machine?
-- [ ] Is authentication needed from day one?
-- [ ] What is the priority order of features for MVP?
+```javascript
+// Test Run
+{
+  id: 1,
+  timestamp: "2026-02-06T10:30:00Z",
+  duration: 12500,           // ms
+  status: "failed",          // passed | failed | mixed
+  passed: 8,
+  failed: 2,
+  skipped: 1,
+  tests: [
+    {
+      className: "tests.SampleTest",
+      methodName: "verifyGoogleTitle",
+      status: "passed",
+      duration: 3200,
+      error: null,
+      screenshot: null
+    },
+    {
+      className: "tests.SampleTest",
+      methodName: "verifySearchResults",
+      status: "failed",
+      duration: 5100,
+      error: "Expected title to contain 'Results' but was 'Google'",
+      stackTrace: "org.testng.Assert...",
+      screenshot: "verifySearchResults.png"
+    }
+  ]
+}
+```
+
+## 8. UI Specifications
+
+| Aspect | Decision |
+|--------|----------|
+| **Theme** | Light mode only |
+| **Layout** | Spacious, card-based, modern |
+| **Navigation** | Top navbar (horizontal) |
+| **Typography** | System font stack, clean sans-serif |
+| **Colors** | Green for pass, red for fail, amber for skip, blue for primary actions |
+| **Screenshots** | Lightbox/modal with zoom on click |
+| **Console logs** | Dark terminal-style panel (monospace font, dark background) |
+| **Responsiveness** | Desktop-first (local use), basic mobile support |
+
+## 9. Test Suite Assumptions
+
+- **Suite size:** Small (under 20 tests)
+- **Run frequency:** On-demand from the dashboard
+- **Framework location:** `selenium-testng/` directory relative to project root
+- **Entry point:** `mvn clean test` (or `mvn test -Dtest=<class>` for single class)
+- **Report output:** `selenium-testng/test-output/ExtentReport_*.html`
+- **Screenshots:** `selenium-testng/test-output/screenshots/`
+
+## 10. Out of Scope (v1)
+
+- Authentication / login
+- Persistent storage (database)
+- Team collaboration (comments, assignments)
+- Bug tracker integrations (Jira, GitHub Issues)
+- Email / Slack notifications
+- CI/CD integration
+- Multi-browser support configuration
+- Side-by-side screenshot comparison
+- Mobile-optimized layout
+
+## 11. Future Enhancements (v2+)
+
+- SQLite persistence for run history across restarts
+- Team collaboration features (comments, assignments)
+- CI/CD webhook integration
+- Jira / GitHub Issues linking
+- Multi-browser test configuration from UI
+- Screenshot comparison across runs
+- Authentication and role-based access
+- Cloud deployment option
 
 ---
 
-*This PRD is a starting point. The following interview will refine scope, priorities, and technical decisions.*
+*Interview completed. This PRD reflects all decisions made. Ready for implementation.*
