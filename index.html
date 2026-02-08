@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bloom Adaptive Learning - My Adventures</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ===== CSS RESET & BASE ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#FAF9F6;--card:#FFFFFF;--teal:#14B8A6;--teal-d:#0D9488;--teal-l:#99F6E4;
+  --amber:#F59E0B;--amber-d:#D97706;--amber-l:#FDE68A;
+  --text:#1E293B;--text-m:#64748B;--text-l:#94A3B8;
+  --red:#EF4444;--green:#22C55E;--purple:#8B5CF6;
+  --radius:16px;--radius-sm:10px;--shadow:0 4px 24px rgba(0,0,0,.07);
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --btn-min:60px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;background:none}
+button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+img{max-width:100%;display:block}
+
+/* ===== SCREEN MANAGEMENT ===== */
+.screen{display:none;animation:fadeUp .4s ease}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== LAYOUT CONTAINER ===== */
+.container{max-width:900px;margin:0 auto;padding:20px}
+
+/* ===== HEADER ===== */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.app-header h1{font-size:1.35rem;font-weight:800;color:var(--teal-d)}
+.app-header h1 span{color:var(--amber)}
+.header-controls{display:flex;align-items:center;gap:12px}
+
+/* ===== SIMPLE MODE TOGGLE ===== */
+.toggle-wrap{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text-m)}
+.toggle-track{width:44px;height:24px;background:#CBD5E1;border-radius:12px;position:relative;transition:.25s;cursor:pointer}
+.toggle-track.on{background:var(--teal)}
+.toggle-knob{width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.toggle-track.on .toggle-knob{left:22px}
+
+/* ===== CARDS ===== */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px}
+
+/* ===== PROFILE SCREEN ===== */
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;margin-top:20px}
+.avatar-card{text-align:center;padding:28px 16px;border-radius:var(--radius);border:3px solid transparent;cursor:pointer;transition:.25s;background:var(--card);box-shadow:var(--shadow)}
+.avatar-card:hover,.avatar-card:focus{border-color:var(--teal);transform:translateY(-4px)}
+.avatar-circle{width:90px;height:90px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2.6rem;position:relative}
+.avatar-circle.alex{background:linear-gradient(135deg,#a78bfa,#818cf8)}
+.avatar-circle.sam{background:linear-gradient(135deg,#fbbf24,#f59e0b)}
+.avatar-name{font-weight:700;font-size:1.1rem;margin-bottom:4px}
+.avatar-stars{color:var(--amber);font-size:1.1rem;letter-spacing:2px}
+.mastery-badge{display:inline-block;background:var(--teal-l);color:var(--teal-d);font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:6px}
+
+/* ===== HOME SCREEN ===== */
+.welcome-banner{text-align:center;padding:30px 20px;background:linear-gradient(135deg,var(--teal-l),#e0f2fe);border-radius:var(--radius);margin-bottom:20px}
+.welcome-banner h2{font-size:1.5rem;font-weight:800;color:var(--teal-d)}
+.welcome-banner p{color:var(--text-m);margin-top:6px;font-size:.95rem}
+.decorative{font-size:1.2rem}
+.section-title{font-size:1.1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+.cat-card{text-align:center;padding:22px 12px;border-radius:var(--radius);border:2px solid #E2E8F0;cursor:pointer;transition:.25s;background:var(--card);min-height:var(--btn-min)}
+.cat-card:hover,.cat-card:focus{border-color:var(--teal);transform:translateY(-3px);box-shadow:var(--shadow)}
+.cat-icon{font-size:2.4rem;margin-bottom:8px}
+.cat-label{font-weight:700;font-size:.92rem}
+.cat-progress{height:6px;background:#E2E8F0;border-radius:3px;margin-top:8px;overflow:hidden}
+.cat-progress-fill{height:100%;border-radius:3px;transition:width .5s}
+.play-next-btn{display:block;width:100%;max-width:340px;margin:28px auto 0;padding:18px;font-size:1.15rem;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:60px;min-height:var(--btn-min);box-shadow:0 6px 20px rgba(20,184,166,.35);transition:.25s;text-align:center}
+.play-next-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(20,184,166,.45)}
+
+/* ===== SKILL LIST SCREEN ===== */
+.skill-list{display:grid;gap:10px}
+.skill-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:var(--radius-sm);border:2px solid #E2E8F0;background:var(--card);min-height:var(--btn-min);cursor:pointer;transition:.2s}
+.skill-item:hover{border-color:var(--teal);background:#F0FDFA}
+.skill-left{display:flex;align-items:center;gap:12px}
+.skill-icon{font-size:1.5rem}
+.skill-name{font-weight:600;font-size:.95rem}
+.skill-mastery{font-size:.75rem;color:var(--text-m)}
+.mastery-dots{display:flex;gap:4px}
+.mastery-dot{width:14px;height:14px;border-radius:50%;border:2px solid #CBD5E1;background:transparent;transition:.3s}
+.mastery-dot.filled{background:var(--green);border-color:var(--green)}
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;font-weight:600;color:var(--teal-d);border-radius:var(--radius-sm);transition:.2s;min-height:var(--btn-min);font-size:.95rem}
+.back-btn:hover{background:var(--teal-l)}
+
+/* ===== QUESTION SCREEN ===== */
+.question-card{text-align:center;padding:32px 20px}
+.question-card h2{font-size:1.3rem;font-weight:800;color:var(--teal-d);margin-bottom:6px}
+.question-text{font-size:1.15rem;color:var(--text);margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.tts-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-m);transition:.2s;padding:4px;border-radius:50%}
+.tts-btn:hover{color:var(--teal)}
+.visual-area{font-size:2.8rem;margin-bottom:24px;line-height:1.6;letter-spacing:6px}
+.answer-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:440px;margin:0 auto}
+.answer-btn{padding:16px;font-size:1.1rem;font-weight:700;border-radius:var(--radius-sm);border:3px solid #E2E8F0;background:var(--card);min-height:var(--btn-min);transition:.25s;color:var(--text)}
+.answer-btn:hover:not(:disabled){border-color:var(--teal);background:#F0FDFA}
+.answer-btn.correct{border-color:var(--green);background:#DCFCE7;color:#166534;animation:popIn .35s ease}
+.answer-btn.wrong{opacity:.2;pointer-events:none;transition:opacity .6s}
+.answer-btn:disabled{cursor:default}
+@keyframes popIn{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+/* ===== TIMER SCREEN ===== */
+.timer-container{text-align:center;padding:30px}
+.timer-ring-wrap{position:relative;width:200px;height:200px;margin:20px auto}
+.timer-ring-wrap svg{transform:rotate(-90deg)}
+.timer-ring-bg{fill:none;stroke:#E2E8F0;stroke-width:10}
+.timer-ring-fg{fill:none;stroke:var(--teal);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .5s linear}
+.timer-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.4rem;font-weight:800;color:var(--teal-d)}
+.timer-controls{display:flex;gap:14px;justify-content:center;margin-top:20px}
+.timer-controls button{padding:14px 28px;border-radius:60px;font-weight:700;font-size:1rem;min-height:var(--btn-min)}
+.timer-start{background:var(--teal);color:#fff}
+.timer-reset{background:#E2E8F0;color:var(--text)}
+.done-badge{display:none;font-size:2.2rem;font-weight:900;color:var(--green);margin-top:20px;animation:donePop .5s ease}
+.done-badge.show{display:block}
+@keyframes donePop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+
+/* ===== RESULT SCREEN ===== */
+.result-card{text-align:center;padding:36px 20px}
+.result-card h2{font-size:1.6rem;font-weight:800;margin-bottom:6px}
+.result-subtitle{color:var(--text-m);margin-bottom:24px;font-size:1rem}
+.result-circles{display:flex;justify-content:center;gap:24px;margin-bottom:24px}
+.result-circle{width:90px;height:90px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.result-circle small{font-size:.65rem;font-weight:600;opacity:.9}
+.result-stats{display:flex;justify-content:center;gap:20px;margin-bottom:28px}
+.stat-box{padding:12px 22px;border-radius:var(--radius-sm);background:#F1F5F9;font-weight:700;font-size:1rem}
+.stat-box span{color:var(--teal-d);font-size:1.3rem}
+
+/* ===== STARBURST ===== */
+.starburst{position:fixed;pointer-events:none;z-index:9999}
+.star-particle{position:absolute;width:10px;height:10px;border-radius:50%;animation:starFly .7s ease-out forwards}
+@keyframes starFly{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
+
+/* ===== PARENT GATE ===== */
+.gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000}
+.gate-overlay.show{display:flex}
+.gate-box{background:var(--card);border-radius:var(--radius);padding:36px;text-align:center;max-width:360px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.gate-box h3{font-size:1.2rem;margin-bottom:8px}
+.gate-box p{color:var(--text-m);font-size:.9rem;margin-bottom:18px}
+.gate-input{width:100%;padding:14px;font-size:1.2rem;text-align:center;border:2px solid #E2E8F0;border-radius:var(--radius-sm);font-weight:700}
+.gate-input:focus{border-color:var(--teal);outline:none}
+.gate-submit{margin-top:14px;padding:14px 32px;background:var(--teal);color:#fff;font-weight:700;border-radius:60px;font-size:1rem;min-height:var(--btn-min)}
+.gate-error{color:var(--red);font-size:.85rem;margin-top:8px;display:none}
+.gate-close{position:absolute;top:12px;right:16px;font-size:1.3rem;color:var(--text-m);background:none;border:none;cursor:pointer}
+
+/* ===== DASHBOARD ===== */
+.dash-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.dash-header h2{font-size:1.3rem;font-weight:800;color:var(--teal-d)}
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+.dash-stat{padding:20px;border-radius:var(--radius);text-align:center}
+.dash-stat.mastery-bg{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff}
+.dash-stat.review-bg{background:linear-gradient(135deg,var(--amber),var(--amber-d));color:#fff}
+.dash-stat.session-bg{background:linear-gradient(135deg,var(--purple),#7C3AED);color:#fff}
+.dash-stat .big{font-size:2rem;font-weight:900;display:block}
+.dash-stat .label{font-size:.78rem;opacity:.9}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.chart-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.chart-card h3{font-size:.95rem;font-weight:700;margin-bottom:12px}
+.skill-table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.85rem}
+.skill-table th,.skill-table td{padding:10px 12px;text-align:left;border-bottom:1px solid #E2E8F0}
+.skill-table th{font-weight:700;color:var(--text-m);font-size:.78rem;text-transform:uppercase}
+.mastery-bar{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;min-width:80px}
+.mastery-bar-fill{height:100%;border-radius:4px}
+
+/* ===== SIMPLE MODE ===== */
+body.simple-mode .decorative,
+body.simple-mode .avatar-stars,
+body.simple-mode .mastery-badge,
+body.simple-mode .welcome-banner p,
+body.simple-mode .cat-progress{display:none!important}
+body.simple-mode .cat-card{border-width:3px}
+body.simple-mode .answer-btn{font-size:1.25rem}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){
+  .container{padding:12px}
+  .app-header h1{font-size:1.1rem}
+  .answer-grid{grid-template-columns:1fr}
+  .profile-grid{grid-template-columns:1fr 1fr}
+  .cat-grid{grid-template-columns:1fr 1fr}
+  .chart-grid{grid-template-columns:1fr}
+  .result-circles{gap:14px}
+  .result-circle{width:74px;height:74px;font-size:1.2rem}
+}
+@media(min-width:1024px){
+  .container{max-width:960px}
+}
+
+/* ===== ACCESSIBILITY ===== */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== PARENT GATE OVERLAY ===== -->
+<div class="gate-overlay" id="parentGate" role="dialog" aria-label="Parent verification">
+  <div class="gate-box" style="position:relative">
+    <button class="gate-close" onclick="closeGate()" aria-label="Close">&times;</button>
+    <h3>Parent Lock</h3>
+    <p>Solve to access the Dashboard:</p>
+    <p style="font-size:1.6rem;font-weight:800;color:var(--teal-d);margin-bottom:12px">12 + 5 = ?</p>
+    <input class="gate-input" type="number" id="gateAnswer" placeholder="?" aria-label="Answer">
+    <div class="gate-error" id="gateError">Incorrect. Try again!</div>
+    <button class="gate-submit" onclick="checkGate()">Unlock</button>
+  </div>
+</div>
+
+<!-- ===== PROFILE SCREEN ===== -->
+<div class="screen active" id="profileScreen">
+  <div class="container">
+    <div class="app-header">
+      <h1>Bloom <span>Adventures</span></h1>
+    </div>
+    <div class="card">
+      <h2 style="text-align:center;margin-bottom:4px">Choose Your Explorer!</h2>
+      <p style="text-align:center;color:var(--text-m);font-size:.9rem" class="decorative">Who's learning today?</p>
+      <div class="profile-grid">
+        <div class="avatar-card" tabindex="0" role="button" aria-label="Select Alex" onclick="selectProfile('Alex')" onkeydown="if(event.key==='Enter')selectProfile('Alex')">
+          <div class="avatar-circle alex" aria-hidden="true">&#129497;</div>
+          <div class="avatar-name">Alex</div>
+          <div class="avatar-stars decorative" id="alexStars"></div>
+          <div class="mastery-badge" id="alexMastery">0% Mastery</div>
+        </div>
+        <div class="avatar-card" tabindex="0" role="button" aria-label="Select Sam" onclick="selectProfile('Sam')" onkeydown="if(event.key==='Enter')selectProfile('Sam')">
+          <div class="avatar-circle sam" aria-hidden="true">&#129333;</div>
+          <div class="avatar-name">Sam</div>
+          <div class="avatar-stars decorative" id="samStars"></div>
+          <div class="mastery-badge" id="samMastery">0% Mastery</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== HOME SCREEN ===== -->
+<div class="screen" id="homeScreen">
+  <div class="container">
+    <div class="app-header">
+      <h1>My <span>Adventures</span></h1>
+      <div class="header-controls">
+        <div class="toggle-wrap">
+          <span>Simple</span>
+          <div class="toggle-track" id="simpleToggle" tabindex="0" role="switch" aria-checked="false" aria-label="Simple language mode" onclick="toggleSimpleMode()" onkeydown="if(event.key==='Enter'||event.key===' ')toggleSimpleMode()">
+            <div class="toggle-knob"></div>
+          </div>
+        </div>
+        <button class="back-btn" onclick="openGate()" aria-label="Parent Dashboard" style="font-size:.82rem;padding:8px 14px;min-height:auto">&#128274; Parent</button>
+        <button class="back-btn" onclick="switchProfile()" aria-label="Switch profile" style="font-size:.82rem;padding:8px 14px;min-height:auto">&#128100;</button>
+      </div>
+    </div>
+    <div class="welcome-banner">
+      <h2>&#11088; Practice makes perfect!</h2>
+      <p>Let's keep the streak going, <strong id="playerNameDisplay"></strong>!</p>
+    </div>
+    <div class="section-title">Areas to Practice</div>
+    <div class="cat-grid" id="categoryGrid"></div>
+    <button class="play-next-btn" onclick="playNext()" aria-label="Play next skill">Play Next! &#11088;</button>
+  </div>
+</div>
+
+<!-- ===== SKILL LIST SCREEN ===== -->
+<div class="screen" id="skillListScreen">
+  <div class="container">
+    <div class="app-header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+      <h1 id="skillListTitle">Skills</h1>
+    </div>
+    <div class="card">
+      <div class="skill-list" id="skillList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUESTION SCREEN ===== -->
+<div class="screen" id="questionScreen">
+  <div class="container">
+    <div class="app-header">
+      <button class="back-btn" onclick="exitQuestion()">&#8592; Back</button>
+      <div style="font-weight:700;font-size:.9rem;color:var(--text-m)" id="questionProgress">1 / 3</div>
+    </div>
+    <div class="card question-card" id="questionCard"></div>
+  </div>
+</div>
+
+<!-- ===== TIMER SCREEN ===== -->
+<div class="screen" id="timerScreen">
+  <div class="container">
+    <div class="app-header">
+      <button class="back-btn" onclick="exitTimer()">&#8592; Back</button>
+      <h1 id="timerTitle">Timer</h1>
+    </div>
+    <div class="card timer-container">
+      <h2 id="timerSkillName" style="margin-bottom:6px"></h2>
+      <p style="color:var(--text-m);font-size:.9rem" id="timerInstruction"></p>
+      <div class="timer-ring-wrap">
+        <svg viewBox="0 0 200 200" width="200" height="200">
+          <circle class="timer-ring-bg" cx="100" cy="100" r="88"/>
+          <circle class="timer-ring-fg" id="timerRing" cx="100" cy="100" r="88" stroke-dasharray="553" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-label" id="timerDisplay">0:00</div>
+      </div>
+      <div class="timer-controls">
+        <button class="timer-start" id="timerStartBtn" onclick="startTimer()">Start</button>
+        <button class="timer-reset" onclick="resetTimer()">Reset</button>
+      </div>
+      <div class="done-badge" id="doneBadge">&#127881; DONE! Great Job! &#127881;</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESULT SCREEN ===== -->
+<div class="screen" id="resultScreen">
+  <div class="container">
+    <div class="card result-card">
+      <h2 id="resultTitle">Great Work!</h2>
+      <p class="result-subtitle" id="resultSubtitle"></p>
+      <div class="result-circles">
+        <div class="result-circle" style="background:linear-gradient(135deg,var(--green),#16A34A)">
+          <span id="resultCorrect">0</span>
+          <small>Correct</small>
+        </div>
+        <div class="result-circle" style="background:linear-gradient(135deg,var(--amber),var(--amber-d))">
+          <span id="resultHelped">0</span>
+          <small>Helped</small>
+        </div>
+      </div>
+      <div class="result-stats">
+        <div class="stat-box"><span id="resultFirstTry">0</span> First Try</div>
+      </div>
+      <button class="play-next-btn" onclick="goHome()" style="max-width:280px">Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD SCREEN ===== -->
+<div class="screen" id="dashboardScreen">
+  <div class="container">
+    <div class="dash-header">
+      <h2>Parent View: Overview for <span id="dashName"></span></h2>
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+    </div>
+    <div class="dash-stats">
+      <div class="dash-stat mastery-bg">
+        <span class="big" id="dashMastery">0%</span>
+        <span class="label">Overall Mastery</span>
+      </div>
+      <div class="dash-stat review-bg">
+        <span class="big" id="dashReview">0</span>
+        <span class="label">Skills to Review</span>
+      </div>
+      <div class="dash-stat session-bg">
+        <span class="big" id="dashSessions">0</span>
+        <span class="label">Sessions Today</span>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>Skill Mastery by Domain</h3>
+        <canvas id="masteryChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Learning Consistency (Last 7 Days)</h3>
+        <canvas id="consistencyChart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:12px">All Skills Progress</h3>
+      <div style="overflow-x:auto">
+        <table class="skill-table" id="dashTable">
+          <thead><tr><th>Skill</th><th>Category</th><th>First-Try</th><th>Mastery</th></tr></thead>
+          <tbody id="dashTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =============================================================
+   BLOOM ADAPTIVE LEARNING - COMPLETE APPLICATION LOGIC
+   ============================================================= */
+
+// ===== SKILL DATABASE (60 items) =====
+const SKILLS = [
+  // MATHLAND (20)
+  {id:'m1',cat:'Mathland',name:'Count to 3',icon:'&#127922;',type:'quiz',q:'How many apples?',visual:'&#127822;&#127822;&#127822;',answers:['2','3','4','1'],correct:'3'},
+  {id:'m2',cat:'Mathland',name:'Count to 5',icon:'&#127922;',type:'quiz',q:'How many stars?',visual:'&#11088;&#11088;&#11088;&#11088;&#11088;',answers:['4','6','5','3'],correct:'5'},
+  {id:'m3',cat:'Mathland',name:'Count to 7',icon:'&#127922;',type:'quiz',q:'How many hearts?',visual:'&#10084;&#10084;&#10084;&#10084;&#10084;&#10084;&#10084;',answers:['6','8','7','5'],correct:'7'},
+  {id:'m4',cat:'Mathland',name:'Count to 10',icon:'&#127922;',type:'quiz',q:'How many dots?',visual:'&#128308;&#128308;&#128308;&#128308;&#128308;&#128308;&#128308;&#128308;&#128308;&#128308;',answers:['9','10','8','11'],correct:'10'},
+  {id:'m5',cat:'Mathland',name:'Identify Penny',icon:'&#129689;',type:'quiz',q:'Which coin is worth 1 cent?',visual:'&#129689;',answers:['Penny','Nickel','Dime','Quarter'],correct:'Penny'},
+  {id:'m6',cat:'Mathland',name:'Identify Nickel',icon:'&#129689;',type:'quiz',q:'Which coin is worth 5 cents?',visual:'&#129689;',answers:['Penny','Nickel','Dime','Quarter'],correct:'Nickel'},
+  {id:'m7',cat:'Mathland',name:'Identify Dime',icon:'&#129689;',type:'quiz',q:'Which coin is worth 10 cents?',visual:'&#129689;',answers:['Penny','Nickel','Dime','Quarter'],correct:'Dime'},
+  {id:'m8',cat:'Mathland',name:'Identify Quarter',icon:'&#129689;',type:'quiz',q:'Which coin is worth 25 cents?',visual:'&#129689;',answers:['Penny','Nickel','Dime','Quarter'],correct:'Quarter'},
+  {id:'m9',cat:'Mathland',name:'Next Dollar Up (1)',icon:'&#128176;',type:'quiz',q:'An item costs $1.25. How much do you pay with dollars?',visual:'&#128176; $1.25',answers:['$1','$2','$3','$1.25'],correct:'$2'},
+  {id:'m10',cat:'Mathland',name:'Next Dollar Up (2)',icon:'&#128176;',type:'quiz',q:'An item costs $3.50. How much do you pay with dollars?',visual:'&#128176; $3.50',answers:['$3','$4','$5','$3.50'],correct:'$4'},
+  {id:'m11',cat:'Mathland',name:'Next Dollar Up (3)',icon:'&#128176;',type:'quiz',q:'An item costs $0.75. How much do you pay with dollars?',visual:'&#128176; $0.75',answers:['$0','$1','$2','$0.75'],correct:'$1'},
+  {id:'m12',cat:'Mathland',name:'Tell Time: 3:00',icon:'&#128336;',type:'quiz',q:'What time does this clock show?',visual:'&#128338;',answers:['2:00','3:00','4:00','3:30'],correct:'3:00'},
+  {id:'m13',cat:'Mathland',name:'Tell Time: 6:30',icon:'&#128336;',type:'quiz',q:'What time does this clock show?',visual:'&#128341;',answers:['6:00','5:30','6:30','7:00'],correct:'6:30'},
+  {id:'m14',cat:'Mathland',name:'Tell Time: 9:00',icon:'&#128336;',type:'quiz',q:'What time does this clock show?',visual:'&#128344;',answers:['8:00','9:00','10:00','9:30'],correct:'9:00'},
+  {id:'m15',cat:'Mathland',name:'Tell Time: 12:30',icon:'&#128336;',type:'quiz',q:'What time does this clock show?',visual:'&#128347;',answers:['12:00','12:30','1:00','11:30'],correct:'12:30'},
+  {id:'m16',cat:'Mathland',name:'Pattern: Colors',icon:'&#127912;',type:'quiz',q:'Red, Blue, Red, Blue, __?',visual:'&#128308;&#128309;&#128308;&#128309;❓',answers:['Blue','Red','Green','Yellow'],correct:'Red'},
+  {id:'m17',cat:'Mathland',name:'Pattern: Shapes',icon:'&#127912;',type:'quiz',q:'Circle, Square, Circle, Square, __?',visual:'&#9898;&#11035;&#9898;&#11035;❓',answers:['Triangle','Square','Circle','Star'],correct:'Circle'},
+  {id:'m18',cat:'Mathland',name:'Pattern: Numbers',icon:'&#127912;',type:'quiz',q:'2, 4, 6, 8, __?',visual:'2 ➜ 4 ➜ 6 ➜ 8 ➜ ❓',answers:['9','10','12','11'],correct:'10'},
+  {id:'m19',cat:'Mathland',name:'Count to 2',icon:'&#127922;',type:'quiz',q:'How many fish?',visual:'&#128031;&#128031;',answers:['1','2','3','4'],correct:'2'},
+  {id:'m20',cat:'Mathland',name:'Count to 4',icon:'&#127922;',type:'quiz',q:'How many trees?',visual:'&#127794;&#127794;&#127794;&#127794;',answers:['3','5','4','2'],correct:'4'},
+  // STORY WORLD (20)
+  {id:'s1',cat:'Story World',name:'Sight Word: THE',icon:'&#128214;',type:'quiz',q:'Which word is "THE"?',visual:'&#128214;',answers:['THE','AND','WAS','FOR'],correct:'THE'},
+  {id:'s2',cat:'Story World',name:'Sight Word: AND',icon:'&#128214;',type:'quiz',q:'Which word is "AND"?',visual:'&#128214;',answers:['THE','BUT','AND','FOR'],correct:'AND'},
+  {id:'s3',cat:'Story World',name:'Sight Word: STOP',icon:'&#128214;',type:'quiz',q:'Which word is "STOP"?',visual:'&#128214;',answers:['STEP','STOP','SHOP','SNAP'],correct:'STOP'},
+  {id:'s4',cat:'Story World',name:'Sight Word: EXIT',icon:'&#128214;',type:'quiz',q:'Which word is "EXIT"?',visual:'&#128214;',answers:['NEXT','TAXI','EXIT','EXAM'],correct:'EXIT'},
+  {id:'s5',cat:'Story World',name:'Greeting: Hello',icon:'&#128075;',type:'quiz',q:'What do you say when you meet someone?',visual:'&#128075;',answers:['Goodbye','Hello','Thanks','Sorry'],correct:'Hello'},
+  {id:'s6',cat:'Story World',name:'Greeting: Bye',icon:'&#128075;',type:'quiz',q:'What do you say when you leave?',visual:'&#128075;',answers:['Hello','Please','Bye','Thanks'],correct:'Bye'},
+  {id:'s7',cat:'Story World',name:'Greeting: Please',icon:'&#128075;',type:'quiz',q:'What polite word do you use when asking?',visual:'&#128591;',answers:['Thanks','Sorry','Hello','Please'],correct:'Please'},
+  {id:'s8',cat:'Story World',name:'Greeting: Thanks',icon:'&#128075;',type:'quiz',q:'What do you say when someone helps you?',visual:'&#128150;',answers:['Bye','Please','Thanks','Hello'],correct:'Thanks'},
+  {id:'s9',cat:'Story World',name:'Emotion: Happy',icon:'&#128522;',type:'quiz',q:'Which face shows HAPPY?',visual:'',answers:['&#128522; Happy','&#128546; Sad','&#128544; Angry','&#128552; Scared'],correct:'&#128522; Happy'},
+  {id:'s10',cat:'Story World',name:'Emotion: Sad',icon:'&#128546;',type:'quiz',q:'Which face shows SAD?',visual:'',answers:['&#128522; Happy','&#128546; Sad','&#128544; Angry','&#128564; Sleepy'],correct:'&#128546; Sad'},
+  {id:'s11',cat:'Story World',name:'Emotion: Angry',icon:'&#128544;',type:'quiz',q:'Which face shows ANGRY?',visual:'',answers:['&#128546; Sad','&#128522; Happy','&#128544; Angry','&#128552; Scared'],correct:'&#128544; Angry'},
+  {id:'s12',cat:'Story World',name:'Emotion: Scared',icon:'&#128552;',type:'quiz',q:'Which face shows SCARED?',visual:'',answers:['&#128564; Sleepy','&#128552; Scared','&#128522; Happy','&#128546; Sad'],correct:'&#128552; Scared'},
+  {id:'s13',cat:'Story World',name:'Body: Head',icon:'&#129492;',type:'quiz',q:'Where is your HEAD?',visual:'&#129492;',answers:['Top of body','On your arm','On your foot','On your hand'],correct:'Top of body'},
+  {id:'s14',cat:'Story World',name:'Body: Hands',icon:'&#9995;',type:'quiz',q:'How many HANDS do you have?',visual:'&#9995;&#9995;',answers:['1','2','3','4'],correct:'2'},
+  {id:'s15',cat:'Story World',name:'Body: Feet',icon:'&#129462;',type:'quiz',q:'What do shoes go on?',visual:'&#128094;',answers:['Hands','Head','Feet','Ears'],correct:'Feet'},
+  {id:'s16',cat:'Story World',name:'Body: Eyes',icon:'&#128064;',type:'quiz',q:'What do you use to SEE?',visual:'&#128064;',answers:['Ears','Nose','Mouth','Eyes'],correct:'Eyes'},
+  {id:'s17',cat:'Story World',name:'Body: Ears',icon:'&#128066;',type:'quiz',q:'What do you use to HEAR?',visual:'&#128066;',answers:['Eyes','Ears','Nose','Hands'],correct:'Ears'},
+  {id:'s18',cat:'Story World',name:'Body: Mouth',icon:'&#128068;',type:'quiz',q:'What do you use to TALK?',visual:'&#128068;',answers:['Mouth','Ears','Feet','Eyes'],correct:'Mouth'},
+  {id:'s19',cat:'Story World',name:'Sight Word: CAN',icon:'&#128214;',type:'quiz',q:'Which word is "CAN"?',visual:'&#128214;',answers:['CAN','CAT','CAR','CUP'],correct:'CAN'},
+  {id:'s20',cat:'Story World',name:'Sight Word: GO',icon:'&#128214;',type:'quiz',q:'Which word is "GO"?',visual:'&#128214;',answers:['NO','DO','GO','SO'],correct:'GO'},
+  // DAILY HELPERS (20)
+  {id:'d1',cat:'Daily Helpers',name:'Hand Washing',icon:'&#129532;',type:'timer',duration:20,instruction:'Wash hands with soap for 20 seconds!'},
+  {id:'d2',cat:'Daily Helpers',name:'Brushing Teeth (Top)',icon:'&#129463;',type:'timer',duration:60,instruction:'Brush the TOP teeth for 1 minute!'},
+  {id:'d3',cat:'Daily Helpers',name:'Brushing Teeth (Bottom)',icon:'&#129463;',type:'timer',duration:60,instruction:'Brush the BOTTOM teeth for 1 minute!'},
+  {id:'d4',cat:'Daily Helpers',name:'Weather: Sunny',icon:'&#127780;',type:'quiz',q:'It\'s sunny outside! What should you wear?',visual:'&#9728;&#65039;',answers:['Heavy coat','Sunglasses & hat','Rain boots','Scarf'],correct:'Sunglasses & hat'},
+  {id:'d5',cat:'Daily Helpers',name:'Weather: Rainy',icon:'&#127783;',type:'quiz',q:'It\'s raining! What do you need?',visual:'&#127783;&#65039;',answers:['Sunglasses','Umbrella','Shorts','Sandals'],correct:'Umbrella'},
+  {id:'d6',cat:'Daily Helpers',name:'Weather: Cold',icon:'&#127784;',type:'quiz',q:'It\'s snowing! What should you wear?',visual:'&#10052;&#65039;',answers:['T-shirt','Warm coat','Sandals','Shorts'],correct:'Warm coat'},
+  {id:'d7',cat:'Daily Helpers',name:'Table Setting: Fork',icon:'&#127860;',type:'quiz',q:'Where does the FORK go?',visual:'&#127860;',answers:['Left of plate','Right of plate','On top','Under plate'],correct:'Left of plate'},
+  {id:'d8',cat:'Daily Helpers',name:'Table Setting: Knife',icon:'&#127860;',type:'quiz',q:'Where does the KNIFE go?',visual:'&#128298;',answers:['Left of plate','Right of plate','On top','Under plate'],correct:'Right of plate'},
+  {id:'d9',cat:'Daily Helpers',name:'Table Setting: Glass',icon:'&#127860;',type:'quiz',q:'Where does the GLASS go?',visual:'&#129371;',answers:['Left side','Above the knife','On the plate','Under plate'],correct:'Above the knife'},
+  {id:'d10',cat:'Daily Helpers',name:'Table Setting: Napkin',icon:'&#127860;',type:'quiz',q:'Where can the NAPKIN go?',visual:'&#129531;',answers:['On the plate','Under the table','In the glass','On the floor'],correct:'On the plate'},
+  {id:'d11',cat:'Daily Helpers',name:'Shoe Tying Step 1',icon:'&#128095;',type:'quiz',q:'What is the FIRST step of tying shoes?',visual:'&#128095;',answers:['Make a bow','Cross the laces','Pull tight','Make loops'],correct:'Cross the laces'},
+  {id:'d12',cat:'Daily Helpers',name:'Shoe Tying Step 2',icon:'&#128095;',type:'quiz',q:'After crossing laces, what next?',visual:'&#128095;',answers:['Make a loop','Pull one under','Take shoes off','Tie a knot'],correct:'Pull one under'},
+  {id:'d13',cat:'Daily Helpers',name:'Shoe Tying Step 3',icon:'&#128095;',type:'quiz',q:'After the first knot, you make...?',visual:'&#128095;',answers:['Two loops (bunny ears)','A square','Nothing','Three knots'],correct:'Two loops (bunny ears)'},
+  {id:'d14',cat:'Daily Helpers',name:'Backpack: Books',icon:'&#127890;',type:'quiz',q:'What goes in your backpack for school?',visual:'&#127890;',answers:['Toys','Books','Pillow','TV remote'],correct:'Books'},
+  {id:'d15',cat:'Daily Helpers',name:'Backpack: Lunch',icon:'&#127890;',type:'quiz',q:'What else do you pack for school?',visual:'&#127890;',answers:['Lunch box','Video games','Pet fish','Blanket'],correct:'Lunch box'},
+  {id:'d16',cat:'Daily Helpers',name:'Backpack: Supplies',icon:'&#127890;',type:'quiz',q:'Which supplies go in your backpack?',visual:'&#9999;&#65039;',answers:['Pencils & crayons','Cooking pots','Garden tools','Bicycle'],correct:'Pencils & crayons'},
+  {id:'d17',cat:'Daily Helpers',name:'Morning Routine',icon:'&#9200;',type:'quiz',q:'What do you do FIRST in the morning?',visual:'&#127749;',answers:['Go to school','Wake up','Eat dinner','Go to bed'],correct:'Wake up'},
+  {id:'d18',cat:'Daily Helpers',name:'Bedtime Routine',icon:'&#127769;',type:'quiz',q:'What do you do BEFORE bed?',visual:'&#127769;',answers:['Brush teeth','Go swimming','Cook food','Ride bike'],correct:'Brush teeth'},
+  {id:'d19',cat:'Daily Helpers',name:'Hand Washing (Long)',icon:'&#129532;',type:'timer',duration:30,instruction:'Extra clean! Wash for 30 seconds!'},
+  {id:'d20',cat:'Daily Helpers',name:'Deep Breathing',icon:'&#128692;',type:'timer',duration:15,instruction:'Breathe in slowly... and out... for 15 seconds!'}
+];
+
+const CATEGORIES = [
+  {key:'Mathland',label:'Mathland',icon:'&#129518;',color:'#14B8A6'},
+  {key:'Story World',label:'Story World',icon:'&#128218;',color:'#8B5CF6'},
+  {key:'Daily Helpers',label:'Daily Helpers',icon:'&#127775;',color:'#F59E0B'}
+];
+
+// ===== STATE =====
+let currentProfile = null;
+let currentCategory = null;
+let currentSkill = null;
+let currentQuestionIndex = 0;
+let sessionCorrect = 0;
+let sessionHelped = 0;
+let sessionFirstTry = 0;
+let questionAnswered = false;
+let wasFirstTry = true;
+let timerInterval = null;
+let timerRemaining = 0;
+let timerDuration = 0;
+let masteryChartInstance = null;
+let consistencyChartInstance = null;
+
+// ===== AUDIO (Web Audio API gentle chime) =====
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playChime(){
+  try{
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine'; osc.frequency.setValueAtTime(523.25,ctx.currentTime);
+    osc.frequency.setValueAtTime(659.25,ctx.currentTime+0.1);
+    osc.frequency.setValueAtTime(783.99,ctx.currentTime+0.2);
+    gain.gain.setValueAtTime(0.3,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.6);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.6);
+  }catch(e){}
+}
+
+function playCelebration(){
+  try{
+    const ctx = getAudioCtx();
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type='sine'; osc.frequency.value=f;
+      gain.gain.setValueAtTime(0.25,ctx.currentTime+i*0.15);
+      gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+i*0.15+0.4);
+      osc.start(ctx.currentTime+i*0.15); osc.stop(ctx.currentTime+i*0.15+0.5);
+    });
+  }catch(e){}
+}
+
+// ===== LOCAL STORAGE =====
+function getData(){
+  try{return JSON.parse(localStorage.getItem('bloom_data'))||{};}catch(e){return {};}
+}
+function saveData(d){localStorage.setItem('bloom_data',JSON.stringify(d));}
+function getProfileData(){
+  const d=getData();
+  if(!d[currentProfile])d[currentProfile]={skills:{},sessions:[],dailyMinutes:{}};
+  return d[currentProfile];
+}
+function saveProfileData(pd){
+  const d=getData(); d[currentProfile]=pd; saveData(d);
+}
+function getSkillData(skillId){
+  const pd=getProfileData();
+  if(!pd.skills[skillId])pd.skills[skillId]={firstTry:0,attempts:0,mastered:false};
+  return pd.skills[skillId];
+}
+function recordSession(){
+  const pd=getProfileData();
+  const today=new Date().toISOString().slice(0,10);
+  if(!pd.sessions)pd.sessions=[];
+  pd.sessions.push({date:today,time:Date.now()});
+  if(!pd.dailyMinutes)pd.dailyMinutes={};
+  pd.dailyMinutes[today]=(pd.dailyMinutes[today]||0)+2;
+  saveProfileData(pd);
+}
+
+// ===== TTS =====
+function speak(text){
+  if('speechSynthesis' in window){
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text.replace(/[^\w\s?.!,'-]/g,''));
+    u.rate=0.85; u.pitch=1.1; window.speechSynthesis.speak(u);
+  }
+}
+
+// ===== STARBURST ANIMATION =====
+function createStarburst(x,y){
+  const colors=['#F59E0B','#14B8A6','#8B5CF6','#EF4444','#22C55E','#EC4899'];
+  const container=document.createElement('div');
+  container.className='starburst'; container.style.left=x+'px'; container.style.top=y+'px';
+  for(let i=0;i<12;i++){
+    const p=document.createElement('div'); p.className='star-particle';
+    const angle=(i/12)*Math.PI*2;
+    const dist=40+Math.random()*40;
+    p.style.background=colors[i%colors.length];
+    p.style.setProperty('--tx',Math.cos(angle)*dist+'px');
+    p.style.setProperty('--ty',Math.sin(angle)*dist+'px');
+    container.appendChild(p);
+  }
+  document.body.appendChild(container);
+  setTimeout(()=>container.remove(),800);
+}
+
+// ===== SCREEN NAV =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ===== SIMPLE MODE =====
+function toggleSimpleMode(){
+  document.body.classList.toggle('simple-mode');
+  const t=document.getElementById('simpleToggle');
+  const on=document.body.classList.contains('simple-mode');
+  t.classList.toggle('on',on);
+  t.setAttribute('aria-checked',on);
+}
+
+// ===== PROFILE =====
+function updateProfileScreen(){
+  const d=getData();
+  ['Alex','Sam'].forEach(name=>{
+    const pd=d[name]||{skills:{}};
+    const total=SKILLS.filter(s=>s.type==='quiz').length;
+    const mastered=Object.values(pd.skills||{}).filter(s=>s.firstTry>=3).length;
+    const pct=total?Math.round(mastered/total*100):0;
+    const stars=Math.min(5,Math.floor(pct/20));
+    document.getElementById(name.toLowerCase()+'Stars').innerHTML='&#11088;'.repeat(stars)+'&#9734;'.repeat(5-stars);
+    document.getElementById(name.toLowerCase()+'Mastery').textContent=pct+'% Mastery';
+  });
+}
+
+function selectProfile(name){
+  currentProfile=name;
+  document.getElementById('playerNameDisplay').textContent=name;
+  renderHome();
+  showScreen('homeScreen');
+}
+
+function switchProfile(){
+  currentProfile=null;
+  updateProfileScreen();
+  showScreen('profileScreen');
+}
+
+// ===== HOME =====
+function renderHome(){
+  const grid=document.getElementById('categoryGrid');
+  grid.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const skills=SKILLS.filter(s=>s.cat===cat.key);
+    const quizSkills=skills.filter(s=>s.type==='quiz');
+    const total=quizSkills.length;
+    const mastered=quizSkills.filter(s=>{const sd=getSkillData(s.id);return sd.firstTry>=3;}).length;
+    const pct=total?Math.round(mastered/total*100):0;
+    const card=document.createElement('div');
+    card.className='cat-card'; card.tabIndex=0;
+    card.setAttribute('role','button');
+    card.setAttribute('aria-label',cat.label+' - '+pct+'% mastery');
+    card.innerHTML=`<div class="cat-icon">${cat.icon}</div>
+      <div class="cat-label">${cat.label}</div>
+      <div class="cat-progress"><div class="cat-progress-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+      <div style="font-size:.72rem;color:var(--text-l);margin-top:4px" class="decorative">${pct}%</div>`;
+    card.onclick=()=>openCategory(cat.key);
+    card.onkeydown=e=>{if(e.key==='Enter')openCategory(cat.key);};
+    grid.appendChild(card);
+  });
+}
+
+// ===== CATEGORY / SKILL LIST =====
+function openCategory(catKey){
+  currentCategory=catKey;
+  const cat=CATEGORIES.find(c=>c.key===catKey);
+  document.getElementById('skillListTitle').textContent=cat.label;
+  const list=document.getElementById('skillList');
+  list.innerHTML='';
+  const skills=SKILLS.filter(s=>s.cat===catKey);
+  skills.forEach(skill=>{
+    const sd=getSkillData(skill.id);
+    const dots=skill.type==='quiz'?
+      [0,1,2].map(i=>`<div class="mastery-dot${sd.firstTry>i?' filled':''}"></div>`).join(''):'';
+    const item=document.createElement('div');
+    item.className='skill-item'; item.tabIndex=0;
+    item.setAttribute('role','button');
+    item.setAttribute('aria-label',skill.name+(sd.firstTry>=3?' - Mastered':''));
+    item.innerHTML=`<div class="skill-left">
+        <span class="skill-icon">${skill.icon}</span>
+        <div><div class="skill-name">${skill.name}</div>
+        <div class="skill-mastery">${skill.type==='timer'?'Timer Activity':sd.firstTry>=3?'Mastered!':sd.firstTry+'/3 First-Try'}</div></div>
+      </div>
+      <div class="mastery-dots">${dots}</div>`;
+    item.onclick=()=>launchSkill(skill);
+    item.onkeydown=e=>{if(e.key==='Enter')launchSkill(skill);};
+    list.appendChild(item);
+  });
+  showScreen('skillListScreen');
+}
+
+// ===== LAUNCH SKILL =====
+function launchSkill(skill){
+  currentSkill=skill;
+  if(skill.type==='timer'){
+    openTimer(skill);
+  }else{
+    startQuizSession(skill);
+  }
+}
+
+// ===== QUIZ SESSION =====
+function startQuizSession(skill){
+  currentQuestionIndex=0;
+  sessionCorrect=0; sessionHelped=0; sessionFirstTry=0;
+  renderQuestion(skill);
+  showScreen('questionScreen');
+}
+
+function renderQuestion(skill){
+  questionAnswered=false; wasFirstTry=true;
+  document.getElementById('questionProgress').textContent=`${currentQuestionIndex+1} / 3`;
+  const card=document.getElementById('questionCard');
+  const shuffled=[...skill.answers].sort(()=>Math.random()-0.5);
+  card.innerHTML=`<h2>${skill.name}</h2>
+    <div class="question-text">${skill.q}
+      <button class="tts-btn" onclick="speak('${skill.q.replace(/'/g,"\\'")}')" aria-label="Read question aloud">&#128266;</button>
+    </div>
+    ${skill.visual?`<div class="visual-area" aria-hidden="true">${skill.visual}</div>`:''}
+    <div class="answer-grid">
+      ${shuffled.map(a=>`<button class="answer-btn" onclick="checkAnswer(this,'${a.replace(/'/g,"\\'")}','${skill.correct.replace(/'/g,"\\'")}')">${a}</button>`).join('')}
+    </div>`;
+}
+
+function checkAnswer(btn,selected,correct){
+  if(questionAnswered) return;
+  if(selected===correct){
+    questionAnswered=true;
+    btn.classList.add('correct');
+    sessionCorrect++;
+    if(wasFirstTry) sessionFirstTry++;
+    playChime();
+    const rect=btn.getBoundingClientRect();
+    createStarburst(rect.left+rect.width/2, rect.top+rect.height/2);
+    // Update skill data
+    const sd=getSkillData(currentSkill.id);
+    sd.attempts++;
+    if(wasFirstTry) sd.firstTry++;
+    if(sd.firstTry>=3) sd.mastered=true;
+    const pd=getProfileData(); pd.skills[currentSkill.id]=sd; saveProfileData(pd);
+    // Next question or result
+    setTimeout(()=>{
+      currentQuestionIndex++;
+      if(currentQuestionIndex<3){
+        renderQuestion(currentSkill);
+      }else{
+        recordSession();
+        showResult();
+      }
+    },900);
+  }else{
+    btn.classList.add('wrong');
+    btn.disabled=true;
+    wasFirstTry=false;
+    sessionHelped++;
+  }
+}
+
+function exitQuestion(){
+  // Errorless learning: reset on exit
+  goHome();
+  renderHome();
+}
+
+// ===== RESULT =====
+function showResult(){
+  document.getElementById('resultTitle').innerHTML=currentSkill.cat+'! &#10024;';
+  document.getElementById('resultSubtitle').textContent=`You got ${sessionCorrect} out of 3 correct!`;
+  document.getElementById('resultCorrect').textContent=sessionCorrect;
+  document.getElementById('resultHelped').textContent=sessionHelped;
+  document.getElementById('resultFirstTry').textContent=sessionFirstTry;
+  playCelebration();
+  showScreen('resultScreen');
+}
+
+// ===== TIMER =====
+function openTimer(skill){
+  currentSkill=skill;
+  timerDuration=skill.duration;
+  timerRemaining=skill.duration;
+  document.getElementById('timerTitle').textContent='Daily Helpers';
+  document.getElementById('timerSkillName').textContent=skill.name;
+  document.getElementById('timerInstruction').textContent=skill.instruction;
+  document.getElementById('doneBadge').classList.remove('show');
+  document.getElementById('timerStartBtn').textContent='Start';
+  updateTimerDisplay();
+  updateTimerRing();
+  showScreen('timerScreen');
+}
+
+function updateTimerDisplay(){
+  const m=Math.floor(timerRemaining/60);
+  const s=timerRemaining%60;
+  document.getElementById('timerDisplay').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function updateTimerRing(){
+  const circumference=2*Math.PI*88;
+  const offset=circumference*(1-timerRemaining/timerDuration);
+  document.getElementById('timerRing').style.strokeDashoffset=offset;
+}
+
+function startTimer(){
+  if(timerInterval){
+    clearInterval(timerInterval); timerInterval=null;
+    document.getElementById('timerStartBtn').textContent='Resume';
+    return;
+  }
+  document.getElementById('timerStartBtn').textContent='Pause';
+  timerInterval=setInterval(()=>{
+    timerRemaining--;
+    updateTimerDisplay(); updateTimerRing();
+    if(timerRemaining<=0){
+      clearInterval(timerInterval); timerInterval=null;
+      document.getElementById('doneBadge').classList.add('show');
+      playCelebration();
+      // Mark as done
+      const sd=getSkillData(currentSkill.id);
+      sd.firstTry=3; sd.mastered=true; sd.attempts=(sd.attempts||0)+1;
+      const pd=getProfileData(); pd.skills[currentSkill.id]=sd; saveProfileData(pd);
+      recordSession();
+    }
+  },1000);
+}
+
+function resetTimer(){
+  clearInterval(timerInterval); timerInterval=null;
+  timerRemaining=timerDuration;
+  document.getElementById('doneBadge').classList.remove('show');
+  document.getElementById('timerStartBtn').textContent='Start';
+  updateTimerDisplay(); updateTimerRing();
+}
+
+function exitTimer(){
+  clearInterval(timerInterval); timerInterval=null;
+  goHome(); renderHome();
+}
+
+// ===== PLAY NEXT =====
+function playNext(){
+  // Find the first unmastered quiz skill
+  const unmasteredQuiz=SKILLS.filter(s=>s.type==='quiz'&&getSkillData(s.id).firstTry<3);
+  if(unmasteredQuiz.length>0){
+    launchSkill(unmasteredQuiz[Math.floor(Math.random()*unmasteredQuiz.length)]);
+  }else{
+    alert('All skills mastered! Amazing work!');
+  }
+}
+
+// ===== PARENT GATE =====
+function openGate(){
+  document.getElementById('parentGate').classList.add('show');
+  document.getElementById('gateAnswer').value='';
+  document.getElementById('gateError').style.display='none';
+  document.getElementById('gateAnswer').focus();
+}
+function closeGate(){
+  document.getElementById('parentGate').classList.remove('show');
+}
+function checkGate(){
+  const val=parseInt(document.getElementById('gateAnswer').value,10);
+  if(val===17){
+    closeGate(); openDashboard();
+  }else{
+    document.getElementById('gateError').style.display='block';
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('parentGate').classList.contains('show'))checkGate();
+});
+
+// ===== DASHBOARD =====
+function openDashboard(){
+  document.getElementById('dashName').textContent=currentProfile;
+  const pd=getProfileData();
+  const quizSkills=SKILLS.filter(s=>s.type==='quiz');
+  const total=quizSkills.length;
+  const mastered=quizSkills.filter(s=>(pd.skills[s.id]||{}).firstTry>=3).length;
+  const pct=total?Math.round(mastered/total*100):0;
+  const toReview=total-mastered;
+  const today=new Date().toISOString().slice(0,10);
+  const sessionsToday=(pd.sessions||[]).filter(s=>s.date===today).length;
+
+  document.getElementById('dashMastery').textContent=pct+'%';
+  document.getElementById('dashReview').textContent=toReview;
+  document.getElementById('dashSessions').textContent=sessionsToday;
+
+  // Bar chart
+  const catData=CATEGORIES.map(cat=>{
+    const catQuiz=SKILLS.filter(s=>s.cat===cat.key&&s.type==='quiz');
+    const catMastered=catQuiz.filter(s=>(pd.skills[s.id]||{}).firstTry>=3).length;
+    return catQuiz.length?Math.round(catMastered/catQuiz.length*100):0;
+  });
+  if(masteryChartInstance)masteryChartInstance.destroy();
+  masteryChartInstance=new Chart(document.getElementById('masteryChart'),{
+    type:'bar',
+    data:{labels:CATEGORIES.map(c=>c.label),datasets:[{label:'% Mastery',data:catData,backgroundColor:['#14B8A6','#8B5CF6','#F59E0B'],borderRadius:8}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false}}}
+  });
+
+  // Line chart - last 7 days
+  const days=[]; const mins=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    days.push(d.toLocaleDateString('en',{weekday:'short'}));
+    mins.push((pd.dailyMinutes||{})[key]||0);
+  }
+  if(consistencyChartInstance)consistencyChartInstance.destroy();
+  consistencyChartInstance=new Chart(document.getElementById('consistencyChart'),{
+    type:'line',
+    data:{labels:days,datasets:[{label:'Minutes',data:mins,borderColor:'#14B8A6',backgroundColor:'rgba(20,184,166,0.1)',fill:true,tension:0.4,pointRadius:5,pointBackgroundColor:'#14B8A6'}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'m'}}},plugins:{legend:{display:false}}}
+  });
+
+  // Table
+  const tbody=document.getElementById('dashTableBody');
+  tbody.innerHTML='';
+  SKILLS.forEach(skill=>{
+    const sd=pd.skills[skill.id]||{firstTry:0};
+    const ft=skill.type==='quiz'?sd.firstTry:'-';
+    const mpct=skill.type==='quiz'?Math.min(100,Math.round(sd.firstTry/3*100)):((sd.firstTry>=3)?100:0);
+    const color=mpct>=100?'#22C55E':mpct>0?'#F59E0B':'#E2E8F0';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${skill.icon} ${skill.name}</td><td>${skill.cat}</td><td>${ft}${skill.type==='quiz'?' / 3':''}</td>
+      <td><div class="mastery-bar"><div class="mastery-bar-fill" style="width:${mpct}%;background:${color}"></div></div></td>`;
+    tbody.appendChild(tr);
+  });
+
+  showScreen('dashboardScreen');
+}
+
+// ===== NAV =====
+function goHome(){
+  renderHome();
+  showScreen('homeScreen');
+}
+
+// ===== INIT =====
+updateProfileScreen();
+</script>
+</body>
+</html>
